@@ -12,7 +12,6 @@ class Game:
 		self.moves = 0
 		self.jumps = 0
 		self.active = True
-		self.pawns = []
 
 	def new_game(self):
 		self.grid = [[None] * i for i in range(1,self.rows + 1)]
@@ -21,7 +20,7 @@ class Game:
 	def populate_grid(self):
 		for row_index,row in enumerate(self.grid):
 			for column_index,column in enumerate(row):
-				self.pawns.append(str(row_index) + str(column_index))
+				#self.pawns.append(str(row_index) + str(column_index))
 				self.grid[row_index][column_index] = Pawn(str(row_index) + str(column_index))
 				
 	def remove_pawn(self,row,column):
@@ -29,27 +28,23 @@ class Game:
 			return None
 
 		# First move lets you remove any piece regardless
-		if self.moves < 1:
+		if self.moves < 1 or self.grid[row][column]:
 			self.grid[row][column] = None
 
 		else:
-			if self.grid[row][column]:
-				self.grid[row][column] = None
-			else:
-				print("Invalid")
-				return False
+			print("Invalid")
+			return False
 		
 		self.moves += 1
 		self.pawn_count -= 1
-		self.pawns.remove(str(row) + str(column))
 		self.show_grid()
 		return self.grid
 
 	def show_grid(self):
 		spaces_list = [12,9,6,3,0]
 		for row_index,row in enumerate(self.grid):
-			spaces = " " * (spaces_list[row_index])
-			print("\t\t" + spaces , end="")
+			spaces = " " * (spaces_list[row_index]) #Amt of spaces vary for each row
+			print("\t\t" + spaces , end=" ")
 			for column_index,column in enumerate(row):
 				if self.grid[row_index][column_index]: 
 					print(self.grid[row_index][column_index].location , end="    ")
@@ -64,7 +59,6 @@ class Game:
 		if self.grid[int(empty_location[0])][int(empty_location[1])] or self.grid[int(jumped_pawn[0])][int(jumped_pawn[1])] == None or abs(int(empty_location) - int(pawn_location)) not in [2,20,22]: 
 			print("Invalid Move")
 		else:
-
 			self.grid[int(empty_location[0])][int(empty_location[1])] = self.grid[int(pawn_location[0])][int(pawn_location[1])]
 			self.grid[int(pawn_location[0])][int(pawn_location[1])] = None
 			self.grid[int(empty_location[0])][int(empty_location[1])].location = empty_location[0] + empty_location[1]
@@ -72,11 +66,10 @@ class Game:
 			self.jumps += 1
 			print("Jumped: {}".format(jumped_pawn))
 			self.remove_pawn(int(jumped_pawn[0]),int(jumped_pawn[1]))
-
 		return None
 
 	def show_stats(self):
-		print("Moves: {}\nJumps: {} \nPawn Count: {}\nPawns: {}".format(self.moves,self.jumps,self.pawn_count,self.pawns ))
+		print("Moves: {}\nJumps: {} \nPawn Count: {}\nPawns: ".format(self.moves,self.jumps,self.pawn_count))
 
 	def show_moves(self,pawn_location):
 		return []
@@ -111,7 +104,7 @@ def initiate_game():
 			elif args[0] == 'help':
 				pass
 			else:
-				game_options[player_decision]()
+				game_options[args[0]]()
 def main():
 	initiate_game()
 
