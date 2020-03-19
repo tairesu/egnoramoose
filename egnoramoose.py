@@ -10,7 +10,9 @@ class Game:
 		self.pawn_count = 15
 		self.grid = self.new_game()
 		self.moves = 0
+		self.jumps = 0
 		self.active = True
+		self.pawns = []
 
 	def new_game(self):
 		self.grid = [[None] * i for i in range(1,self.rows + 1)]
@@ -19,9 +21,13 @@ class Game:
 	def populate_grid(self):
 		for row_index,row in enumerate(self.grid):
 			for column_index,column in enumerate(row):
+				self.pawns.append(str(row_index) + str(column_index))
 				self.grid[row_index][column_index] = Pawn(str(row_index) + str(column_index))
 				
 	def remove_pawn(self,row,column):
+		if row >= len(self.grid) or column >= len(self.grid[row]):
+			return None
+
 		# First move lets you remove any piece regardless
 		if self.moves < 1:
 			self.grid[row][column] = None
@@ -30,19 +36,21 @@ class Game:
 			if self.grid[row][column]:
 				self.grid[row][column] = None
 			else:
-				print("[{}][{}] filled".format(row,column))
+				print("Invalid")
 				return False
 		
 		self.moves += 1
+		self.pawn_count -= 1
+		self.pawns.remove(str(row) + str(column))
+		self.show_grid()
 		return self.grid
 
 	def show_grid(self):
 		spaces_list = [12,9,6,3,0]
 		for row_index,row in enumerate(self.grid):
 			spaces = " " * (spaces_list[row_index])
-			print(spaces , end="")
+			print("\t\t" + spaces , end="")
 			for column_index,column in enumerate(row):
-
 				if self.grid[row_index][column_index]: 
 					print(self.grid[row_index][column_index].location , end="    ")
 				else:
@@ -50,26 +58,50 @@ class Game:
 			print("\n")
 
 	def validate_jump(self,pawn_location,empty_location):
-		pass
+		jumped_pawn = str(int(int(pawn_location) + ((int(empty_location) - int(pawn_location)) / 2))) # The math for determining jumped cell location given old and new cell locations
+		
+		# Can't jump if new cell is occupied or jumped cell is empty or cell difference isnt 2 20 22
+		if self.grid[int(empty_location[0])][int(empty_location[1])] or self.grid[int(jumped_pawn[0])][int(jumped_pawn[1])] == None or abs(int(empty_location) - int(pawn_location)) not in [2,20,22]: 
+			print("Invalid Move")
+		else:
+
+			self.grid[int(empty_location[0])][int(empty_location[1])] = self.grid[int(pawn_location[0])][int(pawn_location[1])]
+			self.grid[int(pawn_location[0])][int(pawn_location[1])] = None
+			self.grid[int(empty_location[0])][int(empty_location[1])].location = empty_location[0] + empty_location[1]
+
+			self.jumps += 1
+			print("Jumped: {}".format(jumped_pawn))
+			self.remove_pawn(int(jumped_pawn[0]),int(jumped_pawn[1]))
+
+		return None
+
+	def show_stats(self):
+		print("Moves: {}\nJumps: {} \nPawn Count: {}\nPawns: {}".format(self.moves,self.jumps,self.pawn_count,self.pawns ))
+
+	def show_moves(self,pawn_location):
+		return []
 
 	def exit(self):
 		self.active = False
 		print("Thanks for playing...")
 
-def main():
-	game = Game()
-	print(game)
 
+def initiate_game():
+	game = Game()
 	game.populate_grid()
 	game.show_grid()
 
 	while game.active:
+		if game.moves == 0:
+			cell = input("Select Cell # to remove: ")
+			game.remove_pawn(int(cell[0]),int(cell[1]))
+
 		player_decision = input(">_: ")
-		
 		game_options = {
 			'show': game.show_grid,
 			'quit': game.exit,
-			'move': game.validate_jump 
+			'move': game.validate_jump,
+			'stats': game.show_stats 
 		}
 		
 		args = player_decision.split(" ")
@@ -80,6 +112,8 @@ def main():
 				pass
 			else:
 				game_options[player_decision]()
+def main():
+	initiate_game()
 
 if __name__ == '__main__':
 	main()
