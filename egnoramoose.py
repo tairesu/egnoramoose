@@ -1,119 +1,167 @@
 class Pawn:
-	def __init__(self,location):
-		self.location = location
+    pass
+
+
+class Location:
+    def __init__(self, *location):
+        self.row = -1
+        self.column = -1
+        self._convert(location)
+
+    def __sub__(self, other):
+        return Location(self.row-other.row, self.column-other.column)
+
+    def __str__(self):
+        return '{}{}'.format(self.row, self.column)
+
+    @staticmethod
+    def _list_to_int(list_obj):
+        return [int(i) for i in list_obj]
+
+    def _convert(self, location):
+        if len(location) == 1:
+            location_str = location[0]
+            assert len(location_str) == 2
+            self.row, self.column = Location._list_to_int(location_str)
+        elif len(location) == 2:
+            for arg in location:
+                if isinstance(arg, str):
+                    assert len(arg) == 1
+            self.row, self.column = Location._list_to_int(location)
+
+    @property
+    def location(self):
+        return (self.row, self.column)
+
 
 class Game:
-	grid = []
-	rows = 5
+    VALID_JUMP_DIFFERENCES = [(0, 2), (2, 0), (2, 2)]
+    rows = 5
 
-	def __init__(self):
-		self.pawn_count = 15
-		self.grid = self.new_game()
-		self.moves = 0
-		self.jumps = 0
-		self.active = True
-		self.pawns = []
+    def __init__(self):
+        self.pawn_count = 15
+        self.moves = 0
+        self.active = True
+        self.grid = Game._create_grid()
+        self.display_char = ' '
+        self.cell_size = 2
+        self.cell_gap_size = self.cell_size*2
+        self.cell_center_offset = int((self.cell_gap_size - self.cell_size)/2)
+        self.gap_display = self.display_char*self.cell_gap_size
+        self.game_shift_size = 2
+        self.game_shift_char = '\t'
 
-	def new_game(self):
-		self.grid = [[None] * i for i in range(1,self.rows + 1)]
-		return self.grid
+    @classmethod
+    def _create_grid(cls):
+        return [[Pawn()]*i for i in range(1, cls.rows+1)]
 
-	def populate_grid(self):
-		for row_index,row in enumerate(self.grid):
-			for column_index,column in enumerate(row):
-				self.pawns.append(str(row_index) + str(column_index))
-				self.grid[row_index][column_index] = Pawn(str(row_index) + str(column_index))
-				
-	def remove_pawn(self,row,column):
-		if row >= len(self.grid) or column >= len(self.grid[row]):
-			return None
+    def remove_pawn(self, row, column):
+        # First move lets you remove any piece regardless
+        cell_location = Location(row, column)
+        if not self._is_occupied(cell_location):
+            print("Invalid")
+            return
+        self._remove(cell_location)
 
-		# First move lets you remove any piece regardless
-		if self.moves < 1:
-			self.grid[row][column] = None
+    def _remove(self, cell_location):
+        self.grid[cell_location.row][cell_location.column] = None
+        self.moves += 1
+        self.pawn_count -= 1
 
-		else:
-			if self.grid[row][column]:
-				self.grid[row][column] = None
-			else:
-				print("Invalid")
-				return False
-		
-		self.moves += 1
-		self.pawn_count -= 1
-		self.pawns.remove(str(row) + str(column))
-		self.show_grid()
-		return self.grid
+    def move(self, src, dest):
+        print('Src {} Dest {}'.format(src, dest))
+        src_location, dest_location = Location(src), Location(dest)
+        if not self._is_move_possible(src_location, dest_location):
+            print("Invalid Move")
+            return
+        self._move(src_location, dest_location)
 
-	def show_grid(self):
-		spaces_list = [12,9,6,3,0]
-		for row_index,row in enumerate(self.grid):
-			spaces = " " * (spaces_list[row_index])
-			print("\t\t" + spaces , end="")
-			for column_index,column in enumerate(row):
-				if self.grid[row_index][column_index]: 
-					print(self.grid[row_index][column_index].location , end="    ")
-				else:
-					print("--" , end= "    ")
-			print("\n")
+    def _is_move_possible(self, src_location, dest_location):
+        jumped_location = self._get_jumped_location(
+            src_location, dest_location)
+        return self._is_move_valid(src_location, dest_location) and \
+            not self._is_occupied(dest_location) and \
+            self._is_occupied(jumped_location)
 
-	def validate_jump(self,pawn_location,empty_location):
-		jumped_pawn = str(int(int(pawn_location) + ((int(empty_location) - int(pawn_location)) / 2))) # The math for determining jumped cell location given old and new cell locations
-		
-		# Can't jump if new cell is occupied or jumped cell is empty or cell difference isnt 2 20 22
-		if self.grid[int(empty_location[0])][int(empty_location[1])] or self.grid[int(jumped_pawn[0])][int(jumped_pawn[1])] == None or abs(int(empty_location) - int(pawn_location)) not in [2,20,22]: 
-			print("Invalid Move")
-		else:
+    def _get_jumped_location(self, src_location, dest_location):
+        jumped_row = int((src_location.row + dest_location.row) / 2)
+        jumped_column = int((src_location.column + dest_location.column) / 2)
+        return Location(jumped_row, jumped_column)
 
-			self.grid[int(empty_location[0])][int(empty_location[1])] = self.grid[int(pawn_location[0])][int(pawn_location[1])]
-			self.grid[int(pawn_location[0])][int(pawn_location[1])] = None
-			self.grid[int(empty_location[0])][int(empty_location[1])].location = empty_location[0] + empty_location[1]
+    def _is_move_valid(self, src_location, dest_location):
+        diff_location = dest_location - src_location
+        return (abs(diff_location.row), abs(diff_location.column)) in Game.VALID_JUMP_DIFFERENCES
 
-			self.jumps += 1
-			print("Jumped: {}".format(jumped_pawn))
-			self.remove_pawn(int(jumped_pawn[0]),int(jumped_pawn[1]))
+    def _move(self, src_location, dest_location):
+        self.grid[dest_location.row][dest_location.column] = Pawn()
+        self.grid[src_location.row][src_location.column] = None
 
-		return None
+    def show_grid(self):
+        for row_index in range(len(self.grid)):
+            print("{}{}".format(
+                self.game_shift_char*self.game_shift_size,
+                self._get_row_display(row_index)))
 
-	def show_stats(self):
-		print("Moves: {}\nJumps: {} \nPawn Count: {}\nPawns: {}".format(self.moves,self.jumps,self.pawn_count,self.pawns ))
+    def _get_row_display(self, row_index):
+        cell_diff = len(self.grid) - (row_index + 1)
+        left_adjusted_display = self.display_char *\
+            (self.cell_center_offset + self.cell_size) * cell_diff
+        row_display = ""
+        for column_index in range(row_index+1):
+            loc = Location(row_index, column_index)
+            row_display += str(loc) if self._is_occupied(loc) else "--"
+            row_display += self.gap_display if column_index < row_index else ""
+        return left_adjusted_display + row_display + "\n"
 
-	def show_moves(self,pawn_location):
-		return []
+    def _is_occupied(self, cell_location):
+        return bool(self.grid[cell_location.row][cell_location.column])
 
-	def exit(self):
-		self.active = False
-		print("Thanks for playing...")
+    def show_stats(self):
+        print("Moves: {}\nPawn Count: {}".format(self.moves, self.pawn_count))
+
+    def show_moves(self, pawn_location):
+        return []
+
+    def exit(self):
+        self.active = False
+        print("Thanks for playing...")
 
 
 def initiate_game():
-	game = Game()
-	game.populate_grid()
-	game.show_grid()
+    game = Game()
+    game_options = {
+        'quit': game.exit,
+        'move': game.move,
+        'stats': game.show_stats
+    }
 
-	while game.active:
-		if game.moves == 0:
-			cell = input("Select Cell # to remove: ")
-			game.remove_pawn(int(cell[0]),int(cell[1]))
+    game.show_grid()
+    while game.active:
+        if game.moves == 0:
+            cell = input("Select Cell # to remove: ")
+            game.remove_pawn(int(cell[0]), int(cell[1]))
 
-		player_decision = input(">_: ")
-		game_options = {
-			'show': game.show_grid,
-			'quit': game.exit,
-			'move': game.validate_jump,
-			'stats': game.show_stats 
-		}
-		
-		args = player_decision.split(" ")
-		if args[0] in game_options:
-			if args[0] == 'move':
-				game_options[args[0]](args[1],args[2]) if len(args) > 2 else print("Move needs two arguments: A pawn location and new location ")
-			elif args[0] == 'help':
-				pass
-			else:
-				game_options[player_decision]()
+        game.show_grid()
+        player_decision = input(">_: ")
+
+        args = player_decision.split(" ")
+        if args[0] not in game_options:
+            continue
+
+        if args[0] == 'move':
+            if len(args) > 2:
+                game_options[args[0]](args[1], args[2])
+            else:
+                print("Move needs two arguments: A pawn location and new location ")
+        elif args[0] == 'help':
+            pass
+        else:
+            game_options[player_decision]()
+
+
 def main():
-	initiate_game()
+    initiate_game()
+
 
 if __name__ == '__main__':
-	main()
+    main()
