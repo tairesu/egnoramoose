@@ -56,12 +56,19 @@ class Game:
         return [[Pawn()]*i for i in range(1, cls.rows+1)]
 
     def remove_pawn(self, row, column):
-        # First move lets you remove any piece regardless
         cell_location = Location(row, column)
-        if not self._is_occupied(cell_location):
+        if not self._is_removable(cell_location):
             print("Invalid")
             return
         self._remove(cell_location)
+
+    def _is_removable(self, cell_location):
+        return self._is_location_on_board(cell_location) and \
+            not self._is_occupied(cell_location)
+
+    def _is_location_on_board(self, location):
+        return (location.row < len(self.grid)) and \
+            (location.column < len(self.grid[location.row]))
 
     def _remove(self, cell_location):
         self.grid[cell_location.row][cell_location.column] = None
@@ -104,7 +111,7 @@ class Game:
 
     def _get_row_display(self, row_index):
         cell_diff = len(self.grid) - (row_index + 1)
-        left_adjusted_display = self.display_char *\
+        left_adjusted_display = self.display_char * \
             (self.cell_center_offset + self.cell_size) * cell_diff
         row_display = ""
         for column_index in range(row_index+1):
